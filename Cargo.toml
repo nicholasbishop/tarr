@@ -5,4 +5,9 @@ authors = ["Nicholas Bishop <nicholasbishop@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 argh = "0.1"
+fehler = "1.0"
+humansize = "1.1"
+tar = "0.4"
+unicode-width = "0.1"
