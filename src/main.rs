@@ -3,6 +3,7 @@ use argh::FromArgs;
 use fehler::throws;
 use humansize::{file_size_opts as options, FileSize};
 use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use tar::Archive;
 use unicode_width::UnicodeWidthStr;
@@ -32,11 +33,10 @@ struct ListCommand {
 }
 
 #[throws]
-fn list_tarball(list: ListCommand) {
-    // TODO: decompression
-    let file = File::open(list.tarball).unwrap();
-    let mut archive = Archive::new(file);
-
+fn list_tarball_impl<R: Read, P: FnMut(&str)>(
+    archive: &mut Archive<R>,
+    mut print: P,
+) {
     struct Entry {
         path: String,
         size: String,
@@ -68,13 +68,22 @@ fn list_tarball(list: ListCommand) {
     entries.sort_unstable_by_key(|e| e.path.clone());
 
     for entry in entries {
-        println!(
+        print(&format!(
             "{:path_width$} {}",
             entry.path,
             entry.size,
             path_width = max_path_columns
-        );
+        ));
     }
+}
+
+#[throws]
+fn list_tarball(list: ListCommand) {
+    // TODO: decompression
+    let file = File::open(list.tarball).unwrap();
+    let mut archive = Archive::new(file);
+
+    list_tarball_impl(&mut archive, |s| println!("{}", s))?;
 }
 
 #[throws]
@@ -85,5 +94,28 @@ fn main() {
         Command::List(list) => {
             list_tarball(list)?;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_tarball() {
+        let file = include_bytes!("../tests/test.tar").to_vec();
+        let mut archive = Archive::new(file.as_slice());
+
+        let mut lines = Vec::new();
+        list_tarball_impl(&mut archive, |s| lines.push(s.to_string())).unwrap();
+
+        assert_eq!(
+            lines,
+            vec![
+                "Cargo.lock 4.80 KiB",
+                "Cargo.toml 187 B",
+                "LICENSE    11.09 KiB",
+            ]
+        );
     }
 }
