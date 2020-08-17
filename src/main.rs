@@ -42,6 +42,10 @@ struct UnpackCommand {
     tarball: PathBuf,
 }
 
+fn print_str(s: &str) {
+    println!("{}", s);
+}
+
 #[throws]
 fn list_tarball_impl<R: Read, P: FnMut(&str)>(
     archive: &mut Archive<R>,
@@ -153,15 +157,14 @@ impl DirContents {
 }
 
 #[throws]
-fn unpack_tarball(unpack: UnpackCommand) {
-    // TODO: decompression
-    let file = File::open(&unpack.tarball).unwrap();
-    let mut archive = Archive::new(file);
-
-    let cwd = env::current_dir()?;
-
+fn unpack_tarball_impl<R: Read, P: FnMut(&str)>(
+    archive: &mut Archive<R>,
+    source: &Path,
+    destination: &Path,
+    mut print: P,
+) {
     // Unpack into a temporary directory
-    let tmp_dir = tempfile::Builder::new().tempdir_in(&cwd)?;
+    let tmp_dir = tempfile::Builder::new().tempdir_in(&destination)?;
     archive.unpack(tmp_dir.path())?;
 
     // Check if there's more than one file in the temporary directory
@@ -172,7 +175,7 @@ fn unpack_tarball(unpack: UnpackCommand) {
         DirContents::One(path) => {
             // OK to unwrap: this path comes from a directory listing,
             // we know the path doesn't terminate in "..".
-            let target_path = cwd.join(path.file_name().unwrap());
+            let target_path = destination.join(path.file_name().unwrap());
             fs::rename(path, &target_path)?;
             println!("unpacked to {}", target_path.display());
         }
@@ -181,7 +184,7 @@ fn unpack_tarball(unpack: UnpackCommand) {
             // path has no file component, but since we've already
             // successfully unpacked the tarball we know the path has a
             // file name.
-            let new_dir = cwd.join(file_stem(&unpack.tarball).unwrap());
+            let new_dir = destination.join(file_stem(&source).unwrap());
             // TODO: check if the target path already exists and deal with
             // that in some way
             let tmp_path = tmp_dir.path();
@@ -189,6 +192,17 @@ fn unpack_tarball(unpack: UnpackCommand) {
             println!("unpacked to {}", new_dir.display());
         }
     }
+}
+
+#[throws]
+fn unpack_tarball(unpack: UnpackCommand) {
+    // TODO: decompression
+    let file = File::open(&unpack.tarball).unwrap();
+    let mut archive = Archive::new(file);
+
+    let cwd = env::current_dir()?;
+
+    unpack_tarball_impl(&mut archive, &unpack.tarball, &cwd, print_str)?;
 }
 
 #[throws]
@@ -234,4 +248,7 @@ mod tests {
         assert_eq!(file_stem(Path::new("foo.tar.gz")).unwrap(), "foo");
         assert_eq!(file_stem(Path::new("foo.bar.tar")).unwrap(), "foo.bar");
     }
+
+    #[test]
+    fn test_unpack_tarball() {}
 }
