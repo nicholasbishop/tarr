@@ -270,7 +270,13 @@ mod tests {
         )
         .unwrap();
 
-        // TODO: check lines
+        assert_eq!(
+            lines,
+            vec![format!(
+                "unpacked to {}",
+                tmp_dir.path().join("myArchive").display().to_string()
+            )]
+        );
         // TODO: check expected contents
     }
 }
