@@ -227,6 +227,17 @@ mod tests {
         include_bytes!("../tests/test.tar").to_vec()
     }
 
+    #[throws]
+    fn get_dir_contents(dir: &Path) -> Vec<PathBuf> {
+        let mut contents = Vec::new();
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            contents.push(entry.path());
+        }
+        contents.sort_unstable();
+        contents
+    }
+
     #[test]
     fn test_list_tarball() {
         let file = get_test_tar();
@@ -270,13 +281,20 @@ mod tests {
         )
         .unwrap();
 
+        let unpack_dir = tmp_dir.path().join("myArchive");
+
         assert_eq!(
             lines,
-            vec![format!(
-                "unpacked to {}",
-                tmp_dir.path().join("myArchive").display().to_string()
-            )]
+            vec![format!("unpacked to {}", unpack_dir.display())]
         );
-        // TODO: check expected contents
+
+        assert_eq!(
+            get_dir_contents(&unpack_dir).unwrap(),
+            vec![
+                unpack_dir.join("Cargo.lock"),
+                unpack_dir.join("Cargo.toml"),
+                unpack_dir.join("LICENSE"),
+            ]
+        );
     }
 }
