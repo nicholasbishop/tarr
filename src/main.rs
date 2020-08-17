@@ -223,9 +223,13 @@ fn main() {
 mod tests {
     use super::*;
 
+    fn get_test_tar() -> Vec<u8> {
+        include_bytes!("../tests/test.tar").to_vec()
+    }
+
     #[test]
     fn test_list_tarball() {
-        let file = include_bytes!("../tests/test.tar").to_vec();
+        let file = get_test_tar();
         let mut archive = Archive::new(file.as_slice());
 
         let mut lines = Vec::new();
@@ -250,5 +254,23 @@ mod tests {
     }
 
     #[test]
-    fn test_unpack_tarball() {}
+    fn test_unpack_tarball() {
+        let file = get_test_tar();
+        let mut archive = Archive::new(file.as_slice());
+
+        let mut lines = Vec::new();
+
+        let tmp_dir = tempfile::TempDir::new().unwrap();
+
+        unpack_tarball_impl(
+            &mut archive,
+            Path::new("myArchive.tar"),
+            tmp_dir.path(),
+            |s| lines.push(s.to_string()),
+        )
+        .unwrap();
+
+        // TODO: check lines
+        // TODO: check expected contents
+    }
 }
