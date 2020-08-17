@@ -6,7 +6,7 @@ edition = "2018"
 repository = "https://github.com/nicholasbishop/tarr"
 license = "Apache-2.0"
 description = "Command-line tarball utility"
-keywords = ["tar", "tarball"]
+keywords = ["tar", "tarball", "cli"]
 readme = "README.md"
 
 [dependencies]
