@@ -149,7 +149,7 @@ fn file_stem(path: &Path) -> Option<&OsStr> {
 #[throws]
 fn unpack_tarball(unpack: UnpackCommand) {
     // TODO: decompression
-    let file = File::open(&unpack.tarball).unwrap();
+    let mut file = File::open(&unpack.tarball).unwrap();
     let mut archive = Archive::new(file);
 
     let mut unpack_dir = env::current_dir()?;
@@ -161,12 +161,23 @@ fn unpack_tarball(unpack: UnpackCommand) {
     if !has_common_prefix(&mut archive)? {
         if let Some(stem) = file_stem(&unpack.tarball) {
             unpack_dir = unpack_dir.join(stem);
-            fs::create_dir(unpack_dir)?;
+            fs::create_dir(&unpack_dir)?;
         } else {
             // TODO: improve error
             throw!(anyhow!("failed to get file stem"));
         }
     }
+
+    // TODO: handle the case where the unpack directory already exists
+
+    // TODO: maybe extract to temporary dir, then rename that dir at
+    // the end? That way no seek is required.
+
+    use std::io::{Seek, SeekFrom};
+    file.seek(SeekFrom::Start(0));
+
+    println!("unpacking to {}", unpack_dir.display());
+    archive.unpack(&unpack_dir)?;
 }
 
 #[throws]
