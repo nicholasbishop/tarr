@@ -3,6 +3,10 @@ name = "tarr"
 version = "0.1.0"
 authors = ["Nicholas Bishop <nicholasbishop@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/nicholasbishop/tarr"
+license = "Apache-2.0"
+description = "Command-line tarball utility"
+keywords = ["tar", "tarball"]
 
 [dependencies]
 anyhow = "1.0"
