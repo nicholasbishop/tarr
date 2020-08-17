@@ -116,6 +116,42 @@ fn file_stem(path: &Path) -> Option<&OsStr> {
     }
 }
 
+enum DirContents {
+    /// Directory is empty
+    Empty,
+    /// Directory contains only one child (either file or directory)
+    One(PathBuf),
+    /// Directory contains multiple children (files or directories)
+    Multiple,
+}
+
+impl DirContents {
+    #[throws]
+    fn new(dir: &Path) -> DirContents {
+        // Check if there's more than one file in the temporary directory
+        let mut first_file = None;
+        let mut count = 0;
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            count += 1;
+            if first_file.is_none() {
+                first_file = Some(entry.path());
+            } else {
+                break;
+            }
+        }
+
+        if count == 0 {
+            DirContents::Empty
+        } else if count == 1 {
+            // OK to unwrap: first_file has been set if count > 0
+            DirContents::One(first_file.unwrap())
+        } else {
+            DirContents::Multiple
+        }
+    }
+}
+
 #[throws]
 fn unpack_tarball(unpack: UnpackCommand) {
     // TODO: decompression
@@ -129,39 +165,29 @@ fn unpack_tarball(unpack: UnpackCommand) {
     archive.unpack(tmp_dir.path())?;
 
     // Check if there's more than one file in the temporary directory
-    let mut first_file = None;
-    let mut count = 0;
-    for entry in fs::read_dir(tmp_dir.path())? {
-        let entry = entry?;
-        count += 1;
-        if first_file.is_none() {
-            first_file = Some(entry.path());
-        } else {
-            break;
+    match DirContents::new(tmp_dir.path())? {
+        DirContents::Empty => {
+            println!("empty tarball");
         }
-    }
-
-    if count == 0 {
-        println!("empty tarball");
-    } else if count == 1 {
-        // OK to unwrap: if count > 0, first_file has been set
-        let first_file = first_file.unwrap();
-        // OK to unwrap: this path comes from a directory listing, we
-        // know the path doesn't terminate in "..".
-        let target_path = cwd.join(first_file.file_name().unwrap());
-        fs::rename(first_file, &target_path)?;
-        println!("unpacked to {}", target_path.display());
-    } else {
-        // OK to unwrap: file_stem can only return None if the input
-        // path has no file component, but since we've already
-        // successfully unpacked the tarball we know the path has a
-        // file name.
-        let new_dir = cwd.join(file_stem(&unpack.tarball).unwrap());
-        // TODO: check if the target path already exists and deal with
-        // that in some way
-        let tmp_path = tmp_dir.path();
-        fs::rename(tmp_path, &new_dir)?;
-        println!("unpacked to {}", new_dir.display());
+        DirContents::One(path) => {
+            // OK to unwrap: this path comes from a directory listing,
+            // we know the path doesn't terminate in "..".
+            let target_path = cwd.join(path.file_name().unwrap());
+            fs::rename(path, &target_path)?;
+            println!("unpacked to {}", target_path.display());
+        }
+        DirContents::Multiple => {
+            // OK to unwrap: file_stem can only return None if the input
+            // path has no file component, but since we've already
+            // successfully unpacked the tarball we know the path has a
+            // file name.
+            let new_dir = cwd.join(file_stem(&unpack.tarball).unwrap());
+            // TODO: check if the target path already exists and deal with
+            // that in some way
+            let tmp_path = tmp_dir.path();
+            fs::rename(tmp_path, &new_dir)?;
+            println!("unpacked to {}", new_dir.display());
+        }
     }
 }
 
