@@ -170,14 +170,14 @@ fn unpack_tarball_impl<R: Read, P: FnMut(&str)>(
     // Check if there's more than one file in the temporary directory
     match DirContents::new(tmp_dir.path())? {
         DirContents::Empty => {
-            println!("empty tarball");
+            print("empty tarball");
         }
         DirContents::One(path) => {
             // OK to unwrap: this path comes from a directory listing,
             // we know the path doesn't terminate in "..".
             let target_path = destination.join(path.file_name().unwrap());
             fs::rename(path, &target_path)?;
-            println!("unpacked to {}", target_path.display());
+            print(&format!("unpacked to {}", target_path.display()));
         }
         DirContents::Multiple => {
             // OK to unwrap: file_stem can only return None if the input
@@ -189,7 +189,7 @@ fn unpack_tarball_impl<R: Read, P: FnMut(&str)>(
             // that in some way
             let tmp_path = tmp_dir.path();
             fs::rename(tmp_path, &new_dir)?;
-            println!("unpacked to {}", new_dir.display());
+            print(&format!("unpacked to {}", new_dir.display()));
         }
     }
 }
