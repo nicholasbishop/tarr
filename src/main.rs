@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Error};
 use argh::FromArgs;
-use fehler::{throw, throws};
+use fehler::throws;
 use humansize::{file_size_opts as options, FileSize};
 use std::env;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Read;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use tar::Archive;
 use unicode_width::UnicodeWidthStr;
 
@@ -96,36 +96,6 @@ fn list_tarball(list: ListCommand) {
     list_tarball_impl(&mut archive, |s| println!("{}", s))?;
 }
 
-#[throws]
-fn has_common_prefix<R: Read>(archive: &mut Archive<R>) -> bool {
-    let mut prefix: Option<OsString> = None;
-    for file in archive.entries()? {
-        let file = file?;
-        let header = file.header();
-        let path = header.path()?;
-
-        if path.is_absolute() {
-            // TODO
-            panic!("absolute paths not yet handled");
-        }
-
-        if let Some(Component::Normal(comp)) = path.components().next() {
-            if let Some(prefix) = &prefix {
-                if prefix != comp {
-                    return false;
-                }
-            } else {
-                prefix = Some(comp.into());
-            }
-        } else {
-            // TODO
-            panic!("unexpected path format in tarball");
-        }
-    }
-
-    true
-}
-
 /// This is similar to Path::file_stem, but it additionally strips off
 /// the ".tar" extension if that is present behind the first
 /// extension.
@@ -149,35 +119,50 @@ fn file_stem(path: &Path) -> Option<&OsStr> {
 #[throws]
 fn unpack_tarball(unpack: UnpackCommand) {
     // TODO: decompression
-    let mut file = File::open(&unpack.tarball).unwrap();
+    let file = File::open(&unpack.tarball).unwrap();
     let mut archive = Archive::new(file);
 
-    let mut unpack_dir = env::current_dir()?;
+    let cwd = env::current_dir()?;
 
-    // Check if all the files in the tarball are in a common
-    // directory. If not, create one based on the name of the
-    // tarball. This avoids ever accidentally bombing a directory with
-    // the contents of an ill-mannered tarball.
-    if !has_common_prefix(&mut archive)? {
-        if let Some(stem) = file_stem(&unpack.tarball) {
-            unpack_dir = unpack_dir.join(stem);
-            fs::create_dir(&unpack_dir)?;
+    // Unpack into a temporary directory
+    let tmp_dir = tempfile::Builder::new().tempdir_in(&cwd)?;
+    archive.unpack(tmp_dir.path())?;
+
+    // Check if there's more than one file in the temporary directory
+    let mut first_file = None;
+    let mut count = 0;
+    for entry in fs::read_dir(tmp_dir.path())? {
+        let entry = entry?;
+        count += 1;
+        if first_file.is_none() {
+            first_file = Some(entry.path());
         } else {
-            // TODO: improve error
-            throw!(anyhow!("failed to get file stem"));
+            break;
         }
     }
 
-    // TODO: handle the case where the unpack directory already exists
-
-    // TODO: maybe extract to temporary dir, then rename that dir at
-    // the end? That way no seek is required.
-
-    use std::io::{Seek, SeekFrom};
-    file.seek(SeekFrom::Start(0));
-
-    println!("unpacking to {}", unpack_dir.display());
-    archive.unpack(&unpack_dir)?;
+    if count == 0 {
+        println!("empty tarball");
+    } else if count == 1 {
+        // OK to unwrap: if count > 0, first_file has been set
+        let first_file = first_file.unwrap();
+        // OK to unwrap: this path comes from a directory listing, we
+        // know the path doesn't terminate in "..".
+        let target_path = cwd.join(first_file.file_name().unwrap());
+        fs::rename(first_file, &target_path)?;
+        println!("unpacked to {}", target_path.display());
+    } else {
+        // OK to unwrap: file_stem can only return None if the input
+        // path has no file component, but since we've already
+        // successfully unpacked the tarball we know the path has a
+        // file name.
+        let new_dir = cwd.join(file_stem(&unpack.tarball).unwrap());
+        // TODO: check if the target path already exists and deal with
+        // that in some way
+        let tmp_path = tmp_dir.path();
+        fs::rename(tmp_path, &new_dir)?;
+        println!("unpacked to {}", new_dir.display());
+    }
 }
 
 #[throws]
