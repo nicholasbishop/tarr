@@ -97,7 +97,7 @@ fn list_tarball(list: ListCommand) {
     let file = File::open(list.tarball).unwrap();
     let mut archive = Archive::new(file);
 
-    list_tarball_impl(&mut archive, |s| println!("{}", s))?;
+    list_tarball_impl(&mut archive, print_str)?;
 }
 
 /// This is similar to Path::file_stem, but it additionally strips off
