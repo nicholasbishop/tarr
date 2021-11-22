@@ -10,10 +10,10 @@ keywords = ["tar", "tarball", "cli"]
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
-argh = "0.1"
-fehler = "1.0"
-humansize = "1.1"
-tar = "0.4"
-tempfile = "3.1"
-unicode-width = "0.1"
+anyhow = "1.0.47"
+argh = "0.1.6"
+fehler = "1.0.0"
+humansize = "1.1.1"
+tar = "0.4.37"
+tempfile = "3.2.0"
+unicode-width = "0.1.9"
