@@ -184,7 +184,7 @@ fn unpack_tarball_impl<R: Read, P: FnMut(&str)>(
             // path has no file component, but since we've already
             // successfully unpacked the tarball we know the path has a
             // file name.
-            let new_dir = destination.join(file_stem(&source).unwrap());
+            let new_dir = destination.join(file_stem(source).unwrap());
             // TODO: check if the target path already exists and deal with
             // that in some way
             let tmp_path = tmp_dir.path();
