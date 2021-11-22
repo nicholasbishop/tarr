@@ -10,10 +10,10 @@ keywords = ["tar", "tarball", "cli"]
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0.47"
-argh = "0.1.6"
-fehler = "1.0.0"
-humansize = "1.1.1"
-tar = "0.4.37"
-tempfile = "3.2.0"
-unicode-width = "0.1.9"
+anyhow = { version = "1.0.47", default-features = false, features = ["std"] }
+argh = { version = "0.1.6", default-features = false }
+fehler = { version = "1.0.0", default-features = false }
+humansize = { version = "1.1.1", default-features = false }
+tar = { version = "0.4.37", default-features = false }
+tempfile = { version = "3.2.0", default-features = false }
+unicode-width = { version = "0.1.9", default-features = false }
