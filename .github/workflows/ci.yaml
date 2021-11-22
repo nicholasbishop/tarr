@@ -1,6 +1,12 @@
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 0'
 
-name: Continuous integration
+name: CI
 
 jobs:
   check:
