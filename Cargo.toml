@@ -1,6 +1,9 @@
+[badges.maintenance]
+status = "deprecated"
+
 [package]
 name = "tarr"
-version = "0.1.1-alpha.0"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/nicholasbishop/tarr"
 license = "Apache-2.0"
